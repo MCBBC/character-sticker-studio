@@ -49,7 +49,7 @@ export interface RunningHubSettings {
   extraNodes: RunningHubNode[]; outputIndex: number;
 }
 export interface ProviderSettings {
-  provider: 'openai' | 'gemini' | 'runninghub'; baseUrl: string; model: string; apiKey?: string;
+  provider: 'openai' | 'gemini' | 'runninghub' | 'labnana'; baseUrl: string; model: string; apiKey?: string;
   hasApiKey?: boolean; size: string; concurrency: number;
   runninghub?: RunningHubSettings;
 }

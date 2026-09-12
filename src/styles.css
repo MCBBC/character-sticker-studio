@@ -528,9 +528,13 @@ svg { flex-shrink: 0; }
 .modal-actions .subtle { font-size: 9px; }
 .provider-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 21px; }
 .provider-options.three-providers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.provider-options.four-providers { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .three-providers > button { min-width: 0; }
+.four-providers > button { min-width: 0; }
 .three-providers strong { line-height: 1.6; }
 .three-providers small { line-height: 1.6; }
+.four-providers strong { line-height: 1.6; }
+.four-providers small { line-height: 1.6; }
 .endpoint-presets { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; font-size: 10px; color: #9c866a; }
 .endpoint-presets > span { margin-right: 3px; }
 .endpoint-presets > button { padding: 6px 10px; border: 1px solid #e1d2bd; background: #f9f4e9; border-radius: 4px; color: #917151; font-size: 10px; }
@@ -566,10 +570,10 @@ svg { flex-shrink: 0; }
 .future-provider .pill { font-size: 7px; }
 .settings-form .error-banner { margin-top: 14px; }
 @media (max-width: 600px) {
-  .provider-options.three-providers { grid-template-columns: 1fr; gap: 7px; }
-  .provider-options.three-providers > button { grid-template-columns: 31px 1fr; padding: 10px 12px; }
-  .provider-options.three-providers strong { font-size: 11px; }
-  .provider-options.three-providers small { font-size: 9px; }
+  .provider-options.three-providers, .provider-options.four-providers { grid-template-columns: 1fr; gap: 7px; }
+  .provider-options.three-providers > button, .provider-options.four-providers > button { grid-template-columns: 31px 1fr; padding: 10px 12px; }
+  .provider-options.three-providers strong, .provider-options.four-providers strong { font-size: 11px; }
+  .provider-options.three-providers small, .provider-options.four-providers small { font-size: 9px; }
   .runninghub-config { padding: 14px; }
   .runninghub-config .form-row { flex-direction: column; gap: 0; }
   .runninghub-config .form-row > * { width: 100%; }

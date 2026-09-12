@@ -12,6 +12,7 @@ export const providerDocs = {
  openai:'https://developers.openai.com/api/reference/resources/images',
  gemini:'https://ai.google.dev/gemini-api/docs/image-generation',
  runninghub:'https://www.runninghub.ai/runninghub-api-doc-en/',
+ labnana:'https://labnana.com/docs/openapi/guide',
 };
 
 export function normalizeBaseUrl(value:string) {
@@ -97,6 +98,19 @@ export async function downloadResult(value: string, signal: AbortSignal, depende
 function decodeImage(value:unknown) {
  if(typeof value!=='string'||value.length>60*1024*1024||!/^[A-Za-z0-9+/\r\n]*={0,2}$/.test(value))throw new ProviderError('服务商未返回有效图片数据，请核对服务商记录。',true);
  const buffer=Buffer.from(value,'base64');if(!buffer.length)throw new ProviderError('服务商返回了空图片，请核对服务商记录。',true);return buffer;
+}
+function aspectRatio(size:string) {
+ const dimensions=/^(\d+)x(\d+)$/.exec(size);
+ if(!dimensions)return '1:1';
+ const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a;
+ const divisor=gcd(Number(dimensions[1]),Number(dimensions[2]));
+ return `${Number(dimensions[1])/divisor}:${Number(dimensions[2])/divisor}`;
+}
+function labnanaProviderFor(model:string) {
+ if(/^gpt-image-2(?:\.5)?(?:-|$)/.test(model))return 'openai';
+ if(model.startsWith('wan'))return 'alibaba';
+ if(model.startsWith('seedream'))return 'bytedance';
+ return 'google';
 }
 
 /** IDs remain strings: RunningHub resource/task IDs exceed JavaScript integer precision. */
@@ -218,16 +232,18 @@ export class CloudImageProvider implements ImageProvider {
     body=form;
    }
    else{headers['Content-Type']='application/json';body=JSON.stringify({model:settings.model,prompt,n:1,size:settings.size});}
-  }else{
+  }else if(settings.provider==='gemini'){
    headers['x-goog-api-key']=settings.apiKey!;headers['Content-Type']='application/json';
    endpoint=settings.baseUrl+`/models/${encodeURIComponent(settings.model)}:generateContent`;
    const parts:unknown[]=[{text:prompt}];if(reference){parts.push({inlineData:{mimeType:'image/png',data:reference.toString('base64')}});if(secondaryReference)parts.push({inlineData:{mimeType:'image/png',data:secondaryReference.toString('base64')}});}
    const imageSize=['1K','2K','4K'].includes(settings.size)?settings.size:'1K';
-   const dimensions=/^(\d+)x(\d+)$/.exec(settings.size);
-   const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a;
-   const divisor=dimensions?gcd(Number(dimensions[1]),Number(dimensions[2])):1;
-   const aspectRatio=dimensions?`${Number(dimensions[1])/divisor}:${Number(dimensions[2])/divisor}`:'1:1';
-   body=JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:{aspectRatio,imageSize}}});
+   body=JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:{aspectRatio:aspectRatio(settings.size),imageSize}}});
+  }else{
+   headers.Authorization=`Bearer ${settings.apiKey}`;headers['Content-Type']='application/json';
+   endpoint=settings.baseUrl+'/openapi/v1/images/generation';
+   const referenceImages=[reference,secondaryReference].filter((item):item is Buffer=>Boolean(item)).map(item=>({inlineData:{mimeType:'image/png',data:item.toString('base64')}}));
+   const imageSize=['1K','2K','4K'].includes(settings.size)?settings.size:'1K';
+   body=JSON.stringify({provider:labnanaProviderFor(settings.model),model:settings.model,prompt,...(referenceImages.length?{referenceImages}:{}),imageConfig:{imageSize,aspectRatio:aspectRatio(settings.size)}});
   }
   try{
    const response=await fetch(endpoint,{method:'POST',headers,body,signal:controller,redirect:'error'});

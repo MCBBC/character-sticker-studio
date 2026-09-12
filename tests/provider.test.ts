@@ -17,6 +17,19 @@ test('Gemini sends native inline reference and receives image parts',async()=>{
  }finally{fixture.closeAllConnections();await new Promise<void>(r=>fixture.close(()=>r()));}
 });
 
+test('Labnana sends OpenAPI image generation request with inline references',async()=>{
+ const primary=Buffer.from('labnana-primary'),secondary=Buffer.from('labnana-secondary'),output=Buffer.from('labnana-result');
+ let received:any,receivedUrl='',receivedAuth='';
+ const fixture=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;received=JSON.parse(body);receivedUrl=req.url!;receivedAuth=String(req.headers.authorization);res.setHeader('content-type','application/json');res.end(JSON.stringify({candidates:[{content:{parts:[{inlineData:{mimeType:'image/png',data:output.toString('base64')}}]}}]}));});
+ await new Promise<void>(r=>fixture.listen(0,'127.0.0.1',r));
+ try{
+  const result=await new CloudImageProvider().generate({settings:{provider:'labnana',baseUrl:`http://127.0.0.1:${(fixture.address() as {port:number}).port}`,model:'seedream-5-0-pro',apiKey:'labnana-key',size:'1024x1536',concurrency:1},prompt:'Keep character identity',reference:primary,secondaryReference:secondary,signal:new AbortController().signal});
+  assert.deepEqual(result,output);assert.equal(receivedUrl,'/openapi/v1/images/generation');assert.equal(receivedAuth,'Bearer labnana-key');
+  assert.equal(received.provider,'bytedance');assert.equal(received.model,'seedream-5-0-pro');assert.equal(received.imageConfig.imageSize,'1K');assert.equal(received.imageConfig.aspectRatio,'2:3');
+  assert.deepEqual(received.referenceImages.map((item:any)=>Buffer.from(item.inlineData.data,'base64')),[primary,secondary]);
+ }finally{fixture.closeAllConnections();await new Promise<void>(r=>fixture.close(()=>r()));}
+});
+
 for(const provider of ['openai','gemini'] as const)test(`${provider} sends ordered original and style references in exactly one request`,async()=>{
  const primary=Buffer.from('original-outfit-bytes'),secondary=Buffer.from('chibi-style-bytes'),output=Buffer.from('result');let calls=0,received:any;
  const fixture=createServer(async(req,res)=>{calls++;const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(chunk);const body=Buffer.concat(chunks);

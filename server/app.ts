@@ -169,7 +169,7 @@ export function createApp(options:AppOptions={}) {
  app.get('/api/bootstrap',(_req,res)=>res.json({projects:store.all('projects'),catalog,settings:safeSettings(settings()),assets:store.all('assets'),jobs:getJobs()}));
  app.get('/api/settings',(_req,res)=>res.json(safeSettings(settings())));
  app.put('/api/settings',(req,res)=>{
-  const body=object(req.body),old=settings();const providerName=body.provider??old.provider;if(!['openai','gemini','runninghub'].includes(providerName))fail('仅支持 OpenAI 兼容、Gemini 原生或 RunningHub 接口。');
+  const body=object(req.body),old=settings();const providerName=body.provider??old.provider;if(!['openai','gemini','runninghub','labnana'].includes(providerName))fail('仅支持 OpenAI 兼容、Gemini 原生、RunningHub 或 Labnana 接口。');
   let baseUrl='';try{baseUrl=normalizeBaseUrl(text(body.baseUrl,old.baseUrl,2000));}catch(error){fail((error as Error).message);}
   let runninghub:ProviderSettings['runninghub'];
   if(providerName==='runninghub'){
@@ -177,7 +177,7 @@ export function createApp(options:AppOptions={}) {
    try{runninghub=validateRunningHubSettings(body.runninghub??old.runninghub);}catch(error){fail((error as Error).message);}
   }
   const model=runninghub?`${runninghub.kind}:${runninghub.resourceId}`:text(body.model,old.model,150).trim();if(!model||/[\r\n]/.test(model))fail('请输入有效的图片模型名称。');
-  const size=text(body.size,old.size,20);if(providerName!=='runninghub'&&!(providerName==='gemini'?['1K','2K','4K','1024x1024','1536x1024','1024x1536','auto']:['256x256','512x512','1024x1024','1536x1024','1024x1536','1792x1024','1024x1792','auto']).includes(size))fail('不支持此图片尺寸。');
+  const size=text(body.size,old.size,20);if(providerName!=='runninghub'&&!(providerName==='gemini'||providerName==='labnana'?['1K','2K','4K','1024x1024','1536x1024','1024x1536','auto']:['256x256','512x512','1024x1024','1536x1024','1024x1536','1792x1024','1024x1792','auto']).includes(size))fail('不支持此图片尺寸。');
   const concurrency=Number(body.concurrency??old.concurrency);if(!Number.isInteger(concurrency)||concurrency<1||concurrency>4)fail('并发数范围为 1–4。');
   const changed=providerName!==old.provider||baseUrl!==old.baseUrl;const supplied=text(body.apiKey,'',4096).trim();if(/[\r\n]/.test(supplied))fail('API 密钥不能换行。');
   const config:ProviderSettings={provider:providerName,baseUrl:baseUrl!,model,size,concurrency,...(runninghub?{runninghub}:{}),apiKey:body.clearApiKey?'':supplied||(!changed?old.apiKey:'')};store.put('settings','provider',config);res.json(safeSettings(config));setImmediate(pump);
